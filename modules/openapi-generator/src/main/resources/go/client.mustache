@@ -169,6 +169,44 @@ func (c *APIClient) ChangeBasePath(path string) {
 	c.cfg.BasePath = path
 }
 
+// signRequest signs the request using https://datatracker.ietf.org/doc/draft-cavage-http-signatures/
+func (c *APIClient) signRequest(
+	ctx context.Context,
+  r *http.Request) error {
+
+  date := time.Now().UTC().Format(http.TimeFormat)
+  hash := sha256.Sum256(r.GetBody())
+  digest := "SHA-256=" + base64.StdEncoding.EncodeToString(hash[:])
+
+  // Building the string to be signed.
+  msg := "(request-target): " + r.GetMethod() + " " + apiclient.DefaultBasePath + r.GetPath() + "\n"
+  msg = strings.ToLower(msg)
+  msg = msg + "content-type: application/json" + "\n"
+  msg = msg + "date: " + date + "\n"
+  msg = msg + "host: " + r.Host + "\n"
+  msg = msg + "digest: " + digest
+
+  h := sha256.New()
+  if _, err := h.Write([]byte(msg)); err != nil {
+    return err
+  }
+  d := h.Sum(nil)
+
+  signature, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, d)
+  if err != nil {
+    return err
+  }
+
+  authStr := `Signature keyId="` + *keyID + `", algorithm="rsa-sha256", headers="(request-target) content-type date host digest", signature="`
+  authStr += base64.StdEncoding.EncodeToString(mySignature) + `"`
+  r.Header.Set("Host", r.Host)
+  r.Header.Set("Date", date)
+  r.Header.Set("Content-Type", "application/json")
+  r.Header.Set("Digest", digest)
+  r.Header.Set("Authorization", authStr)
+  return nil
+}
+
 // prepareRequest build the request
 func (c *APIClient) prepareRequest(
 	ctx context.Context,
@@ -317,6 +355,11 @@ func (c *APIClient) prepareRequest(
 		// Basic HTTP Authentication
 		if auth, ok := ctx.Value(ContextBasicAuth).(BasicAuth); ok {
 			localVarRequest.SetBasicAuth(auth.UserName, auth.Password)
+		}
+
+    // HTTP Signature Authentication
+		if auth, ok := ctx.Value(ContextHttpSignatureAuth).(HttpSignatureAuth); ok {
+      c.signRequest(ctx, localVarRequest, auth)
 		}
 
 		// AccessToken Authentication
