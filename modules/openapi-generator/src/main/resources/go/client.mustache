@@ -6,6 +6,8 @@ import (
 	"context"
   "crypto"
   "crypto/rsa"
+  "crypto/sha256"
+  "crypto/sha512"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -171,15 +173,28 @@ func (c *APIClient) ChangeBasePath(path string) {
 	c.cfg.BasePath = path
 }
 
-// signRequest signs the request using https://datatracker.ietf.org/doc/draft-cavage-http-signatures/
+// signRequest signs the request using HTTP signature.
+// See https://datatracker.ietf.org/doc/draft-cavage-http-signatures/
 func (c *APIClient) signRequest(
 	ctx context.Context,
   r *http.Request,
   auth HttpSignatureAuth) error {
 
   date := time.Now().UTC().Format(http.TimeFormat)
-  hash := sha256.Sum256(r.GetBody())
-  digest := "SHA-256=" + base64.StdEncoding.EncodeToString(hash[:])
+  var digest string
+  var h crypto.Hash
+  switch auth.Algorithm {
+  case SignRsaSha256:
+    hash := sha256.Sum256(r.GetBody())
+    digest = "SHA-256=" + base64.StdEncoding.EncodeToString(hash[:])
+    h = sha256.New()
+  case SignHs2019:
+    hash := sha512.Sum512(r.GetBody())
+    digest = "SHA-512=" + base64.StdEncoding.EncodeToString(hash[:])
+    h = sha512.New()
+  default:
+    return fmt.Errorf("Unsupported signature algorith: %v", auth.Signature)
+  }
 
   // Building the string to be signed.
   msg := fmt.Sprintf("(request-target): %s %s\n", r.GetMethod(), r.Path)
@@ -189,19 +204,18 @@ func (c *APIClient) signRequest(
   msg = msg + "host: " + r.Host + "\n"
   msg = msg + "digest: " + digest
 
-  h := sha256.New()
   if _, err := h.Write([]byte(msg)); err != nil {
     return err
   }
   d := h.Sum(nil)
 
-  signature, err := rsa.SignPKCS1v15(rand.Reader, auth.privKey, crypto.SHA256, d)
+  signature, err := rsa.SignPKCS1v15(rand.Reader, auth.PrivateKey, h, d)
   if err != nil {
     return err
   }
 
   authStr := `Signature keyId="` + *keyID + `", algorithm="rsa-sha256", headers="(request-target) content-type date host digest", signature="`
-  authStr += base64.StdEncoding.EncodeToString(mySignature) + `"`
+  authStr += base64.StdEncoding.EncodeToString(signature) + `"`
   r.Header.Set("Host", r.Host)
   r.Header.Set("Date", date)
   r.Header.Set("Content-Type", "application/json")

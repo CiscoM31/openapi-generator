@@ -39,9 +39,17 @@ type BasicAuth struct {
 	Password string `json:"password,omitempty"`
 }
 
+type CryptoSignatureAlg int
+
+const (
+  SignHs2019 CryptoSignatureAlg = iota    // RSA-SHA512
+  SignRsaSha256                           // RSA-SHA256, deprecated
+)
+
 // HttpSignatureAuth provides http message signature authentication to a request passed via context using ContextHttpSignatureAuth
 type HttpSignatureAuth struct {
-  privateKey *crypto.PrivateKey
+  PrivateKey *crypto.PrivateKey
+  Algorithm  CryptoSignatureAlg
 }
 
 // APIKey provides API key based authentication to a request passed via context using ContextAPIKey
