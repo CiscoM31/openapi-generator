@@ -2,6 +2,7 @@
 package {{packageName}}
 
 import (
+  "crypto"
 	"net/http"
 )
 
@@ -22,6 +23,9 @@ var (
 	// ContextBasicAuth takes BasicAuth as authentication for the request.
 	ContextBasicAuth = contextKey("basic")
 
+	// ContextHttpSignatureAuth takes HttpSignatureAuth as authentication for the request.
+	ContextHttpSignatureAuth = contextKey("httpsignature")
+
 	// ContextAccessToken takes a string oauth2 access token as authentication for the request.
 	ContextAccessToken = contextKey("accesstoken")
 
@@ -33,6 +37,11 @@ var (
 type BasicAuth struct {
 	UserName string `json:"userName,omitempty"`
 	Password string `json:"password,omitempty"`
+}
+
+// HttpSignatureAuth provides http message signature authentication to a request passed via context using ContextHttpSignatureAuth
+type HttpSignatureAuth struct {
+  privateKey *crypto.PrivateKey
 }
 
 // APIKey provides API key based authentication to a request passed via context using ContextAPIKey

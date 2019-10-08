@@ -4,6 +4,8 @@ package {{packageName}}
 import (
 	"bytes"
 	"context"
+  "crypto"
+  "crypto/rsa"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -172,14 +174,15 @@ func (c *APIClient) ChangeBasePath(path string) {
 // signRequest signs the request using https://datatracker.ietf.org/doc/draft-cavage-http-signatures/
 func (c *APIClient) signRequest(
 	ctx context.Context,
-  r *http.Request) error {
+  r *http.Request,
+  auth HttpSignatureAuth) error {
 
   date := time.Now().UTC().Format(http.TimeFormat)
   hash := sha256.Sum256(r.GetBody())
   digest := "SHA-256=" + base64.StdEncoding.EncodeToString(hash[:])
 
   // Building the string to be signed.
-  msg := "(request-target): " + r.GetMethod() + " " + apiclient.DefaultBasePath + r.GetPath() + "\n"
+  msg := fmt.Sprintf("(request-target): %s %s\n", r.GetMethod(), r.Path)
   msg = strings.ToLower(msg)
   msg = msg + "content-type: application/json" + "\n"
   msg = msg + "date: " + date + "\n"
@@ -192,7 +195,7 @@ func (c *APIClient) signRequest(
   }
   d := h.Sum(nil)
 
-  signature, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, d)
+  signature, err := rsa.SignPKCS1v15(rand.Reader, auth.privKey, crypto.SHA256, d)
   if err != nil {
     return err
   }
