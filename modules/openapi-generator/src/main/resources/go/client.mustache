@@ -183,33 +183,40 @@ func (c *APIClient) signRequest(
   date := time.Now().UTC().Format(http.TimeFormat)
   var digest string
   var h crypto.Hash
+  var err error
   switch auth.Algorithm {
-  case SignRsaSha256:
-    hash := sha256.Sum256(r.GetBody())
-    digest = "SHA-256=" + base64.StdEncoding.EncodeToString(hash[:])
-    h = sha256.New()
   case SignHs2019:
     hash := sha512.Sum512(r.GetBody())
     digest = "SHA-512=" + base64.StdEncoding.EncodeToString(hash[:])
     h = sha512.New()
+  case SignRsaSha256:
+    // This is deprecated and should not longer be used.
+    hash := sha256.Sum256(r.GetBody())
+    digest = "SHA-256=" + base64.StdEncoding.EncodeToString(hash[:])
+    h = sha256.New()
   default:
     return fmt.Errorf("Unsupported signature algorith: %v", auth.Signature)
   }
 
   // Building the string to be signed.
-  msg := fmt.Sprintf("(request-target): %s %s\n", r.GetMethod(), r.Path)
-  msg = strings.ToLower(msg)
+  msg := fmt.Sprintf("(request-target): %s %s\n", strings.ToLower(r.GetMethod()), r.Path)
   msg = msg + "content-type: application/json" + "\n"
   msg = msg + "date: " + date + "\n"
   msg = msg + "host: " + r.Host + "\n"
   msg = msg + "digest: " + digest
 
-  if _, err := h.Write([]byte(msg)); err != nil {
+  if _, err = h.Write([]byte(msg)); err != nil {
     return err
   }
   d := h.Sum(nil)
 
-  signature, err := rsa.SignPKCS1v15(rand.Reader, auth.PrivateKey, h, d)
+  var signature []byte
+  switch auth.Algorithm.(type) {
+  case *rsa.PrivateKey:
+    signature, err = rsa.SignPKCS1v15(rand.Reader, *auth.PrivateKey, h, d)
+  default:
+    return fmt.Errorf("Unsupported private key")
+  }
   if err != nil {
     return err
   }
