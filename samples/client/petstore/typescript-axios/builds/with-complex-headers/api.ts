@@ -348,8 +348,13 @@ export const PetApiAxiosParamCreator = function (configuration?: Configuration) 
             localVarUrlObj.search = (new URLSearchParams(queryParameters)).toString();
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            const needsSerialization = (typeof pet !== "string") && configuration.isJsonMime(localVarRequestOptions.headers['Content-Type']);
-            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(pet !== undefined ? pet : {}) : (pet || "");
+            const nonString = typeof pet !== 'string';
+            const needsSerialization = nonString && configuration && configuration.isJsonMime
+                ? configuration.isJsonMime(localVarRequestOptions.headers['Content-Type'])
+                : nonString;
+            localVarRequestOptions.data =  needsSerialization
+                ? JSON.stringify(pet !== undefined ? pet : {})
+                : (pet || "");
 
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
@@ -621,8 +626,13 @@ export const PetApiAxiosParamCreator = function (configuration?: Configuration) 
             localVarUrlObj.search = (new URLSearchParams(queryParameters)).toString();
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            const needsSerialization = (typeof pet !== "string") && configuration.isJsonMime(localVarRequestOptions.headers['Content-Type']);
-            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(pet !== undefined ? pet : {}) : (pet || "");
+            const nonString = typeof pet !== 'string';
+            const needsSerialization = nonString && configuration && configuration.isJsonMime
+                ? configuration.isJsonMime(localVarRequestOptions.headers['Content-Type'])
+                : nonString;
+            localVarRequestOptions.data =  needsSerialization
+                ? JSON.stringify(pet !== undefined ? pet : {})
+                : (pet || "");
 
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
@@ -666,10 +676,12 @@ export const PetApiAxiosParamCreator = function (configuration?: Configuration) 
                 localVarHeaderParameter["Authorization"] = "Bearer " + localVarAccessTokenValue;
             }
 
-            if (name !== undefined) {
+
+            if (name !== undefined) { 
                 localVarFormParams.set('name', name as any);
             }
-                if (status !== undefined) {
+    
+            if (status !== undefined) { 
                 localVarFormParams.set('status', status as any);
             }
     
@@ -730,10 +742,12 @@ export const PetApiAxiosParamCreator = function (configuration?: Configuration) 
                 localVarHeaderParameter["Authorization"] = "Bearer " + localVarAccessTokenValue;
             }
 
-            if (additionalMetadata !== undefined) {
+
+            if (additionalMetadata !== undefined) { 
                 localVarFormParams.append('additionalMetadata', additionalMetadata as any);
             }
-                if (file !== undefined) {
+    
+            if (file !== undefined) { 
                 localVarFormParams.append('file', file as any);
             }
     
@@ -777,7 +791,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async addPet(pet: Pet, header1?: Pet, header2?: Array<Pet>, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).addPet(pet, header1, header2, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -792,7 +806,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async deletePet(petId: number, apiKey?: string, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).deletePet(petId, apiKey, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -806,7 +820,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async findPetsByStatus(status: Array<'available' | 'pending' | 'sold'>, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Pet>>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).findPetsByStatus(status, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -820,7 +834,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async findPetsByTags(tags: Array<string>, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<Pet>>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).findPetsByTags(tags, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -834,7 +848,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async getPetById(petId: number, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Pet>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).getPetById(petId, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -848,7 +862,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async updatePet(pet: Pet, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).updatePet(pet, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -864,7 +878,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async updatePetWithForm(petId: number, name?: string, status?: string, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).updatePetWithForm(petId, name, status, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -880,7 +894,7 @@ export const PetApiFp = function(configuration?: Configuration) {
          */
         async uploadFile(petId: number, additionalMetadata?: string, file?: any, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ApiResponse>> {
             const localVarAxiosArgs = await PetApiAxiosParamCreator(configuration).uploadFile(petId, additionalMetadata, file, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1271,8 +1285,13 @@ export const StoreApiAxiosParamCreator = function (configuration?: Configuration
             localVarUrlObj.search = (new URLSearchParams(queryParameters)).toString();
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            const needsSerialization = (typeof order !== "string") && configuration.isJsonMime(localVarRequestOptions.headers['Content-Type']);
-            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(order !== undefined ? order : {}) : (order || "");
+            const nonString = typeof order !== 'string';
+            const needsSerialization = nonString && configuration && configuration.isJsonMime
+                ? configuration.isJsonMime(localVarRequestOptions.headers['Content-Type'])
+                : nonString;
+            localVarRequestOptions.data =  needsSerialization
+                ? JSON.stringify(order !== undefined ? order : {})
+                : (order || "");
 
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
@@ -1297,7 +1316,7 @@ export const StoreApiFp = function(configuration?: Configuration) {
          */
         async deleteOrder(orderId: string, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await StoreApiAxiosParamCreator(configuration).deleteOrder(orderId, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1310,7 +1329,7 @@ export const StoreApiFp = function(configuration?: Configuration) {
          */
         async getInventory(options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: number; }>> {
             const localVarAxiosArgs = await StoreApiAxiosParamCreator(configuration).getInventory(options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1324,7 +1343,7 @@ export const StoreApiFp = function(configuration?: Configuration) {
          */
         async getOrderById(orderId: number, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Order>> {
             const localVarAxiosArgs = await StoreApiAxiosParamCreator(configuration).getOrderById(orderId, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1338,7 +1357,7 @@ export const StoreApiFp = function(configuration?: Configuration) {
          */
         async placeOrder(order: Order, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Order>> {
             const localVarAxiosArgs = await StoreApiAxiosParamCreator(configuration).placeOrder(order, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1494,8 +1513,13 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
             localVarUrlObj.search = (new URLSearchParams(queryParameters)).toString();
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            const needsSerialization = (typeof user !== "string") && configuration.isJsonMime(localVarRequestOptions.headers['Content-Type']);
-            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(user !== undefined ? user : {}) : (user || "");
+            const nonString = typeof user !== 'string';
+            const needsSerialization = nonString && configuration && configuration.isJsonMime
+                ? configuration.isJsonMime(localVarRequestOptions.headers['Content-Type'])
+                : nonString;
+            localVarRequestOptions.data =  needsSerialization
+                ? JSON.stringify(user !== undefined ? user : {})
+                : (user || "");
 
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
@@ -1540,8 +1564,13 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
             localVarUrlObj.search = (new URLSearchParams(queryParameters)).toString();
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            const needsSerialization = (typeof user !== "string") && configuration.isJsonMime(localVarRequestOptions.headers['Content-Type']);
-            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(user !== undefined ? user : {}) : (user || "");
+            const nonString = typeof user !== 'string';
+            const needsSerialization = nonString && configuration && configuration.isJsonMime
+                ? configuration.isJsonMime(localVarRequestOptions.headers['Content-Type'])
+                : nonString;
+            localVarRequestOptions.data =  needsSerialization
+                ? JSON.stringify(user !== undefined ? user : {})
+                : (user || "");
 
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
@@ -1586,8 +1615,13 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
             localVarUrlObj.search = (new URLSearchParams(queryParameters)).toString();
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            const needsSerialization = (typeof user !== "string") && configuration.isJsonMime(localVarRequestOptions.headers['Content-Type']);
-            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(user !== undefined ? user : {}) : (user || "");
+            const nonString = typeof user !== 'string';
+            const needsSerialization = nonString && configuration && configuration.isJsonMime
+                ? configuration.isJsonMime(localVarRequestOptions.headers['Content-Type'])
+                : nonString;
+            localVarRequestOptions.data =  needsSerialization
+                ? JSON.stringify(user !== undefined ? user : {})
+                : (user || "");
 
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
@@ -1816,8 +1850,13 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
             localVarUrlObj.search = (new URLSearchParams(queryParameters)).toString();
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            const needsSerialization = (typeof user !== "string") && configuration.isJsonMime(localVarRequestOptions.headers['Content-Type']);
-            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(user !== undefined ? user : {}) : (user || "");
+            const nonString = typeof user !== 'string';
+            const needsSerialization = nonString && configuration && configuration.isJsonMime
+                ? configuration.isJsonMime(localVarRequestOptions.headers['Content-Type'])
+                : nonString;
+            localVarRequestOptions.data =  needsSerialization
+                ? JSON.stringify(user !== undefined ? user : {})
+                : (user || "");
 
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
@@ -1842,7 +1881,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async createUser(user: User, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).createUser(user, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1856,7 +1895,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async createUsersWithArrayInput(user: Array<User>, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).createUsersWithArrayInput(user, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1870,7 +1909,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async createUsersWithListInput(user: Array<User>, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).createUsersWithListInput(user, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1884,7 +1923,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async deleteUser(username: string, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).deleteUser(username, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1898,7 +1937,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async getUserByName(username: string, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).getUserByName(username, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1913,7 +1952,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async loginUser(username: string, password: string, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).loginUser(username, password, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1926,7 +1965,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async logoutUser(options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).logoutUser(options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1941,7 +1980,7 @@ export const UserApiFp = function(configuration?: Configuration) {
          */
         async updateUser(username: string, user: User, options?: any): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
             const localVarAxiosArgs = await UserApiAxiosParamCreator(configuration).updateUser(username, user, options);
-            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+            return (axios: AxiosInstance = globalAxios, basePath: string = this.basePath) => {
                 const axiosRequestArgs = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
