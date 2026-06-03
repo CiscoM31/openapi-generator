@@ -9,8 +9,10 @@
 
 
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Org.OpenAPITools.Client;
 
 namespace Org.OpenAPITools.Model
 {
@@ -27,13 +29,8 @@ namespace Org.OpenAPITools.Model
             // OpenAPI generated types generally hide default constructors.
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
             MissingMemberHandling = MissingMemberHandling.Error,
-            ContractResolver = new DefaultContractResolver
-            {
-                NamingStrategy = new CamelCaseNamingStrategy
-                {
-                    OverrideSpecifiedNames = false
-                }
-            }
+            ContractResolver = new NonPublicSetterContractResolver(),
+            Converters = new List<JsonConverter> { new ObjectToNativeDictionaryConverter() }
         };
 
         /// <summary>
@@ -44,13 +41,8 @@ namespace Org.OpenAPITools.Model
             // OpenAPI generated types generally hide default constructors.
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
             MissingMemberHandling = MissingMemberHandling.Ignore,
-            ContractResolver = new DefaultContractResolver
-            {
-                NamingStrategy = new CamelCaseNamingStrategy
-                {
-                    OverrideSpecifiedNames = false
-                }
-            }
+            ContractResolver = new NonPublicSetterContractResolver(),
+            Converters = new List<JsonConverter> { new ObjectToNativeDictionaryConverter() }
         };
 
         /// <summary>

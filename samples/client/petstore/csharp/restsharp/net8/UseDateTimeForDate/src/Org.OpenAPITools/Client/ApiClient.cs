@@ -23,6 +23,7 @@ using System.Threading;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using RestSharp;
 using RestSharp.Serializers;
@@ -34,6 +35,108 @@ using Org.OpenAPITools.Model;
 namespace Org.OpenAPITools.Client
 {
     /// <summary>
+    /// Custom contract resolver that allows deserialization of properties with private setters.
+    /// This is needed because the OpenAPI generator marks read-only properties with private setters,
+    /// but Newtonsoft.Json's DefaultContractResolver does not populate them by default.
+    /// </summary>
+    internal class NonPublicSetterContractResolver : DefaultContractResolver
+    {
+        public NonPublicSetterContractResolver()
+        {
+            NamingStrategy = new CamelCaseNamingStrategy
+            {
+                OverrideSpecifiedNames = false
+            };
+        }
+
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+        {
+            var prop = base.CreateProperty(member, memberSerialization);
+
+            if (!prop.Writable)
+            {
+                var property = member as System.Reflection.PropertyInfo;
+                if (property != null)
+                {
+                    prop.Writable = property.GetSetMethod(true) != null;
+                }
+            }
+
+            return prop;
+        }
+    }
+
+    /// <summary>
+    /// Converts Object-typed properties from JObject/JArray to native .NET Dictionary/List
+    /// so that PowerShell and other consumers can access nested values directly.
+    /// </summary>
+    internal class ObjectToNativeDictionaryConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType)
+        {
+            return objectType == typeof(object);
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.StartObject)
+            {
+                var jObj = JObject.Load(reader);
+                return ConvertJToken(jObj);
+            }
+            else if (reader.TokenType == JsonToken.StartArray)
+            {
+                var jArr = JArray.Load(reader);
+                return ConvertJToken(jArr);
+            }
+            else if (reader.TokenType == JsonToken.Null)
+            {
+                return null;
+            }
+            else
+            {
+                // Primitive value
+                return serializer.Deserialize(reader);
+            }
+        }
+
+        private object ConvertJToken(JToken token)
+        {
+            switch (token.Type)
+            {
+                case JTokenType.Object:
+                    var dict = new Dictionary<string, object>();
+                    foreach (var prop in ((JObject)token).Properties())
+                    {
+                        dict[prop.Name] = ConvertJToken(prop.Value);
+                    }
+                    return dict;
+                case JTokenType.Array:
+                    var list = new List<object>();
+                    foreach (var item in (JArray)token)
+                    {
+                        list.Add(ConvertJToken(item));
+                    }
+                    // Flatten single-element arrays to scalar for cleaner display
+                    if (list.Count == 1)
+                    {
+                        return list[0];
+                    }
+                    return list;
+                default:
+                    return ((JValue)token).Value;
+            }
+        }
+
+        public override bool CanWrite => false;
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            throw new NotImplementedException("ObjectToNativeDictionaryConverter is read-only.");
+        }
+    }
+
+    /// <summary>
     /// Allows RestSharp to Serialize/Deserialize JSON using our custom logic, but only when ContentType is JSON.
     /// </summary>
     internal class CustomJsonCodec : IRestSerializer, ISerializer, IDeserializer
@@ -43,13 +146,8 @@ namespace Org.OpenAPITools.Client
         {
             // OpenAPI generated types generally hide default constructors.
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-            ContractResolver = new DefaultContractResolver
-            {
-                NamingStrategy = new CamelCaseNamingStrategy
-                {
-                    OverrideSpecifiedNames = false
-                }
-            }
+            ContractResolver = new NonPublicSetterContractResolver(),
+            Converters = new List<JsonConverter> { new ObjectToNativeDictionaryConverter() }
         };
 
         public CustomJsonCodec(IReadableConfiguration configuration)
@@ -177,13 +275,8 @@ namespace Org.OpenAPITools.Client
         {
             // OpenAPI generated types generally hide default constructors.
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-            ContractResolver = new DefaultContractResolver
-            {
-                NamingStrategy = new CamelCaseNamingStrategy
-                {
-                    OverrideSpecifiedNames = false
-                }
-            }
+            ContractResolver = new NonPublicSetterContractResolver(),
+            Converters = new List<JsonConverter> { new ObjectToNativeDictionaryConverter() }
         };
 
         /// <summary>
