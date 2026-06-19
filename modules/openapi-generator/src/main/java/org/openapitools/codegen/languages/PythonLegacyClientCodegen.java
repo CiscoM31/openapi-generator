@@ -333,8 +333,12 @@ public class PythonLegacyClientCodegen extends AbstractPythonCodegen implements 
 
             //Must follow Perl /pattern/modifiers convention
             if (pattern.charAt(0) != '/' || i < 2) {
-                throw new IllegalArgumentException("Pattern must follow the Perl "
-                        + "/pattern/modifiers convention. " + pattern + " is not valid.");
+                // OpenAPI 3.1: pattern may be a raw regex without /pattern/ delimiters
+                // Treat the entire string as the regex with no modifiers
+                String regex = pattern.replace("'", "\\'");
+                vendorExtensions.put("x-regex", regex);
+                vendorExtensions.put("x-modifiers", new ArrayList<String>());
+                return;
             }
 
             String regex = pattern.substring(1, i).replace("'", "\\'");

@@ -154,6 +154,7 @@ public class PythonClientCodegen extends PythonLegacyClientCodegen {
                 .orElse(null);
         supportingFiles.remove(originalInitModel);
         supportingFiles.add(new SupportingFile("__init__model.mustache", packagePath() + File.separatorChar + "model", "__init__.py"));
+        supportingFiles.add(new SupportingFile("errorunknown.mustache", packagePath() + File.separatorChar + "model", "errorunknown.py"));
         supportingFiles.add(new SupportingFile("__init__apis.mustache", packagePath() + File.separatorChar + "apis", "__init__.py"));
         // Generate the 'signing.py' module, but only if the 'HTTP signature' security scheme is specified in the OAS.
         Map<String, SecurityScheme> securitySchemeMap = openAPI != null ?
@@ -349,6 +350,9 @@ public class PythonClientCodegen extends PythonLegacyClientCodegen {
         } else if (ModelUtils.isDateTimeSchema(p)) {
             defaultValue = pythonDateTime(defaultObject);
         } else if (ModelUtils.isStringSchema(p) && !ModelUtils.isByteArraySchema(p) && !ModelUtils.isBinarySchema(p) && !ModelUtils.isFileSchema(p) && !ModelUtils.isUUIDSchema(p) && !ModelUtils.isEmailSchema(p)) {
+            defaultValue = ensureQuotes(defaultValue);
+        } else if (defaultObject instanceof String && !ModelUtils.isBooleanSchema(p) && !ModelUtils.isDateSchema(p) && !ModelUtils.isDateTimeSchema(p)) {
+            // For 3.1 specs where JsonSchema may not report type=string but default is a string
             defaultValue = ensureQuotes(defaultValue);
         } else if (ModelUtils.isBooleanSchema(p)) {
             if (!Boolean.valueOf(defaultValue)) {
@@ -620,7 +624,17 @@ public class PythonClientCodegen extends PythonLegacyClientCodegen {
         // but they should not be required because if we have ComposedSchema: oneOf -schemaA -schemaB
         // and the required props are only in schemaB, we do not need to use them when making an instance of
         // ComposedSchema + schemaA
-        ComposedSchema cs = (ComposedSchema) schema;
+        ComposedSchema cs;
+        if (schema instanceof ComposedSchema) {
+            cs = (ComposedSchema) schema;
+        } else {
+            cs = new ComposedSchema();
+            cs.allOf(schema.getAllOf());
+            cs.anyOf(schema.getAnyOf());
+            cs.oneOf(schema.getOneOf());
+            cs.setProperties(schema.getProperties());
+            cs.setRequired(schema.getRequired());
+        }
 
         // these are the properties that are from properties in self cs or cs allOf
         Map<String, Schema> selfProperties = new LinkedHashMap<>();
@@ -898,8 +912,7 @@ public class PythonClientCodegen extends PythonLegacyClientCodegen {
             Schema inner = getAdditionalProperties(p);
             return prefix + "{str: " + getTypeString(inner, "(", ")", referencedModelNames) + "}" + fullSuffix;
         } else if (ModelUtils.isArraySchema(p)) {
-            ArraySchema ap = (ArraySchema) p;
-            Schema inner = ap.getItems();
+            Schema inner = p.getItems();
             if (inner == null) {
                 // In OAS 3.0.x, the array "items" attribute is required.
                 // In OAS >= 3.1, the array "items" attribute is optional such that the OAS
@@ -1242,8 +1255,7 @@ public class PythonClientCodegen extends PythonLegacyClientCodegen {
             }
             return fullPrefix + example + closeChars;
         } else if (ModelUtils.isArraySchema(schema)) {
-            ArraySchema arrayschema = (ArraySchema) schema;
-            Schema itemSchema = arrayschema.getItems();
+            Schema itemSchema = schema.getItems();
             String itemModelName = getModelName(itemSchema);
             if (objExample instanceof Iterable && itemModelName == null) {
                 // If the example is already a list, return it directly instead of wrongly wrap it in another list
@@ -1392,8 +1404,7 @@ public class PythonClientCodegen extends PythonLegacyClientCodegen {
         } else if (simpleStringSchema(schema)) {
             return propName + "_example";
         } else if (ModelUtils.isArraySchema(schema)) {
-            ArraySchema arraySchema = (ArraySchema) schema;
-            Schema itemSchema = arraySchema.getItems();
+            Schema itemSchema = schema.getItems();
             example = getObjectExample(itemSchema);
             if (example != null) {
                 return example;

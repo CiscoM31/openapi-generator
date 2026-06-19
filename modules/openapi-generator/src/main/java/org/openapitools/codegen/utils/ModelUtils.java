@@ -349,8 +349,8 @@ public class ModelUtils {
                     visitSchema(openAPI, s, mimeType, visitedSchemas, visitor);
                 }
             }
-        } else if (schema instanceof ArraySchema) {
-            Schema itemsSchema = ((ArraySchema) schema).getItems();
+        } else if (isArraySchema(schema)) {
+            Schema itemsSchema = schema.getItems();
             if (itemsSchema != null) {
                 visitSchema(openAPI, itemsSchema, mimeType, visitedSchemas, visitor);
             }
@@ -409,6 +409,20 @@ public class ModelUtils {
     }
 
     /**
+     * Check if a schema has the given type, considering both getType() (3.0)
+     * and getTypes() (3.1) representations.
+     */
+    public static boolean hasSchemaType(Schema schema, String typeName) {
+        if (typeName.equals(schema.getType())) {
+            return true;
+        }
+        if (schema.getTypes() != null && schema.getTypes().contains(typeName)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Return true if the specified schema is type object
      * We can't use isObjectSchema because it requires properties to exist which is not required
      * We can't use isMap because it is true for AnyType use cases
@@ -417,7 +431,11 @@ public class ModelUtils {
      * @return true if the specified schema is an Object schema.
      */
     public static boolean isTypeObjectSchema(Schema schema) {
-        if (SchemaTypeUtil.OBJECT_TYPE.equals(schema.getType())) {
+        if (hasSchemaType(schema, SchemaTypeUtil.OBJECT_TYPE)) {
+            return true;
+        }
+        // For 3.1 specs: schema with properties but no type is effectively an object
+        if (schema.getType() == null && schema.getTypes() == null && schema.getProperties() != null && !schema.getProperties().isEmpty()) {
             return true;
         }
         return false;
@@ -471,6 +489,19 @@ public class ModelUtils {
     public static boolean isComposedSchema(Schema schema) {
         if (schema instanceof ComposedSchema) {
             return true;
+        }
+        // For OpenAPI 3.1 support: swagger-parser may not always create ComposedSchema instances.
+        // Check if the schema has allOf, anyOf, or oneOf set directly.
+        if (schema != null) {
+            if (schema.getAllOf() != null && !schema.getAllOf().isEmpty()) {
+                return true;
+            }
+            if (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
+                return true;
+            }
+            if (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
+                return true;
+            }
         }
         return false;
     }
@@ -535,7 +566,17 @@ public class ModelUtils {
      * @return true if the specified schema is an Array schema.
      */
     public static boolean isArraySchema(Schema schema) {
-        return (schema instanceof ArraySchema);
+        if (schema instanceof ArraySchema) {
+            return true;
+        }
+        // For OpenAPI 3.1 JsonSchema where type may be ["array", "null"] or just "array"
+        if (schema.getItems() != null) {
+            return true;
+        }
+        if (hasSchemaType(schema, "array")) {
+            return true;
+        }
+        return false;
     }
 
     public static boolean isSet(Schema schema) {
@@ -546,6 +587,9 @@ public class ModelUtils {
         if (schema instanceof StringSchema || SchemaTypeUtil.STRING_TYPE.equals(schema.getType())) {
             return true;
         }
+        if (hasSchemaType(schema, SchemaTypeUtil.STRING_TYPE)) {
+            return true;
+        }
         return false;
     }
 
@@ -553,23 +597,23 @@ public class ModelUtils {
         if (schema instanceof IntegerSchema) {
             return true;
         }
-        if (SchemaTypeUtil.INTEGER_TYPE.equals(schema.getType())) {
+        if (hasSchemaType(schema, SchemaTypeUtil.INTEGER_TYPE)) {
             return true;
         }
         return false;
     }
 
     public static boolean isShortSchema(Schema schema) {
-        if (SchemaTypeUtil.INTEGER_TYPE.equals(schema.getType()) // type: integer
-                && SchemaTypeUtil.INTEGER32_FORMAT.equals(schema.getFormat())) { // format: short (int32)
+        if (hasSchemaType(schema, SchemaTypeUtil.INTEGER_TYPE)
+                && SchemaTypeUtil.INTEGER32_FORMAT.equals(schema.getFormat())) {
             return true;
         }
         return false;
     }
 
     public static boolean isLongSchema(Schema schema) {
-        if (SchemaTypeUtil.INTEGER_TYPE.equals(schema.getType()) // type: integer
-                && SchemaTypeUtil.INTEGER64_FORMAT.equals(schema.getFormat())) { // format: long (int64)
+        if (hasSchemaType(schema, SchemaTypeUtil.INTEGER_TYPE)
+                && SchemaTypeUtil.INTEGER64_FORMAT.equals(schema.getFormat())) {
             return true;
         }
         return false;
@@ -582,6 +626,9 @@ public class ModelUtils {
         if (SchemaTypeUtil.BOOLEAN_TYPE.equals(schema.getType())) {
             return true;
         }
+        if (hasSchemaType(schema, SchemaTypeUtil.BOOLEAN_TYPE)) {
+            return true;
+        }
         return false;
     }
 
@@ -592,20 +639,23 @@ public class ModelUtils {
         if (SchemaTypeUtil.NUMBER_TYPE.equals(schema.getType())) {
             return true;
         }
+        if (hasSchemaType(schema, SchemaTypeUtil.NUMBER_TYPE)) {
+            return true;
+        }
         return false;
     }
 
     public static boolean isFloatSchema(Schema schema) {
-        if (SchemaTypeUtil.NUMBER_TYPE.equals(schema.getType())
-                && SchemaTypeUtil.FLOAT_FORMAT.equals(schema.getFormat())) { // format: float
+        if (hasSchemaType(schema, SchemaTypeUtil.NUMBER_TYPE)
+                && SchemaTypeUtil.FLOAT_FORMAT.equals(schema.getFormat())) {
             return true;
         }
         return false;
     }
 
     public static boolean isDoubleSchema(Schema schema) {
-        if (SchemaTypeUtil.NUMBER_TYPE.equals(schema.getType())
-                && SchemaTypeUtil.DOUBLE_FORMAT.equals(schema.getFormat())) { // format: double
+        if (hasSchemaType(schema, SchemaTypeUtil.NUMBER_TYPE)
+                && SchemaTypeUtil.DOUBLE_FORMAT.equals(schema.getFormat())) {
             return true;
         }
         return false;
@@ -616,8 +666,8 @@ public class ModelUtils {
             return true;
         }
 
-        if (SchemaTypeUtil.STRING_TYPE.equals(schema.getType())
-                && SchemaTypeUtil.DATE_FORMAT.equals(schema.getFormat())) { // format: date
+        if (hasSchemaType(schema, SchemaTypeUtil.STRING_TYPE)
+                && SchemaTypeUtil.DATE_FORMAT.equals(schema.getFormat())) {
             return true;
         }
         return false;
@@ -627,8 +677,8 @@ public class ModelUtils {
         if (schema instanceof DateTimeSchema) {
             return true;
         }
-        if (SchemaTypeUtil.STRING_TYPE.equals(schema.getType())
-                && SchemaTypeUtil.DATE_TIME_FORMAT.equals(schema.getFormat())) { // format: date-time
+        if (hasSchemaType(schema, SchemaTypeUtil.STRING_TYPE)
+                && SchemaTypeUtil.DATE_TIME_FORMAT.equals(schema.getFormat())) {
             return true;
         }
         return false;
@@ -815,6 +865,16 @@ public class ModelUtils {
             if (interfaces != null && !interfaces.isEmpty()) {
                 return false;
             }
+        }
+        // For OpenAPI 3.1: also check allOf/anyOf/oneOf on plain Schema objects
+        if (schema.getAllOf() != null && !schema.getAllOf().isEmpty()) {
+            return false;
+        }
+        if (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
+            return false;
+        }
+        if (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
+            return false;
         }
 
         // has at least one property
@@ -1152,7 +1212,7 @@ public class ModelUtils {
                 }
             }
         } else if (isArraySchema(schema)) {
-            Schema itemsSchema = ((ArraySchema) schema).getItems();
+            Schema itemsSchema = schema.getItems();
             if (itemsSchema != null) {
                 return hasSelfReference(openAPI, itemsSchema, visitedSchemaNames);
             }
@@ -1373,6 +1433,27 @@ public class ModelUtils {
             return composed.getAnyOf();
         } else if (composed.getOneOf() != null && !composed.getOneOf().isEmpty()) {
             return composed.getOneOf();
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Get the interfaces from a plain Schema that has allOf/anyOf/oneOf (OpenAPI 3.1 support).
+     *
+     * @param schema schema that may have allOf, anyOf or oneOf
+     * @return a list of schema defined in allOf, anyOf or oneOf
+     */
+    public static List<Schema> getInterfaces(Schema schema) {
+        if (schema instanceof ComposedSchema) {
+            return getInterfaces((ComposedSchema) schema);
+        }
+        if (schema.getAllOf() != null && !schema.getAllOf().isEmpty()) {
+            return schema.getAllOf();
+        } else if (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
+            return schema.getAnyOf();
+        } else if (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
+            return schema.getOneOf();
         } else {
             return Collections.emptyList();
         }
@@ -1615,6 +1696,10 @@ public class ModelUtils {
         if ("null".equals(schema.getType())) {
             return true;
         }
+        // OpenAPI 3.1: type can be specified via getTypes()
+        if (schema.getTypes() != null && schema.getTypes().contains("null") && schema.getTypes().size() == 1) {
+            return true;
+        }
         return false;
     }
 
@@ -1626,7 +1711,25 @@ public class ModelUtils {
      * @return boolean
      */
     public static boolean isAnyType(Schema schema) {
-        return (schema.get$ref() == null && schema.getType() == null);
+        if (schema.get$ref() != null) {
+            return false;
+        }
+        if (schema.getType() != null) {
+            return false;
+        }
+        // For 3.1 specs: check getTypes() as well
+        if (schema.getTypes() != null && !schema.getTypes().isEmpty()) {
+            return false;
+        }
+        // For 3.1 specs: if items is set, it's an array, not anyType
+        if (schema.getItems() != null) {
+            return false;
+        }
+        // For 3.1 specs: if properties is set, it's an object, not anyType
+        if (schema.getProperties() != null && !schema.getProperties().isEmpty()) {
+            return false;
+        }
+        return true;
     }
 
     public static void syncValidationProperties(Schema schema, IJsonSchemaValidationProperties target) {

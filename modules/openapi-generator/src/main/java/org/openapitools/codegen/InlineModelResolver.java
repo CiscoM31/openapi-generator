@@ -166,12 +166,11 @@ public class InlineModelResolver {
                 return true;
             }
         }
-        if (schema instanceof ComposedSchema) {
+        if (schema instanceof ComposedSchema || ModelUtils.isComposedSchema(schema)) {
             // allOf, anyOf, oneOf
-            ComposedSchema m = (ComposedSchema) schema;
-            if (m.getAllOf() != null && !m.getAllOf().isEmpty()) {
+            if (schema.getAllOf() != null && !schema.getAllOf().isEmpty()) {
                 // check to ensure at least of the allOf item is model
-                for (Schema inner : m.getAllOf()) {
+                for (Schema inner : (List<Schema>) schema.getAllOf()) {
                     if (isModelNeeded(ModelUtils.getReferencedSchema(openAPI, inner))) {
                         return true;
                     }
@@ -179,10 +178,10 @@ public class InlineModelResolver {
                 // allOf items are all non-model (e.g. type: string) only
                 return false;
             }
-            if (m.getAnyOf() != null && !m.getAnyOf().isEmpty()) {
+            if (schema.getAnyOf() != null && !schema.getAnyOf().isEmpty()) {
                 return true;
             }
-            if (m.getOneOf() != null && !m.getOneOf().isEmpty()) {
+            if (schema.getOneOf() != null && !schema.getOneOf().isEmpty()) {
                 return true;
             }
         }
@@ -225,13 +224,12 @@ public class InlineModelResolver {
                         // If this schema should be split into its own model, do so
                         Schema refSchema = this.makeSchemaInComponents(schemaName, prop);
                         props.put(propName, refSchema);
-                    } else if (prop instanceof ComposedSchema) {
-                        ComposedSchema m = (ComposedSchema) prop;
-                        if (m.getAllOf() != null && m.getAllOf().size() == 1 &&
-                                !(m.getAllOf().get(0).getType() == null || "object".equals(m.getAllOf().get(0).getType()))) {
+                    } else if (prop instanceof ComposedSchema || ModelUtils.isComposedSchema(prop)) {
+                        if (prop.getAllOf() != null && prop.getAllOf().size() == 1 &&
+                                !(((Schema)prop.getAllOf().get(0)).getType() == null || "object".equals(((Schema)prop.getAllOf().get(0)).getType()))) {
                             // allOf with only 1 type (non-model)
                             LOGGER.info("allOf schema used by the property `{}` replaced by its only item (a type)", propName);
-                            props.put(propName, m.getAllOf().get(0));
+                            props.put(propName, (Schema) prop.getAllOf().get(0));
                         }
                     }
                 }
@@ -263,9 +261,8 @@ public class InlineModelResolver {
             return;
         }
         // Check array items
-        if (schema instanceof ArraySchema) {
-            ArraySchema array = (ArraySchema) schema;
-            Schema items = array.getItems();
+        if (ModelUtils.isArraySchema(schema)) {
+            Schema items = schema.getItems();
             /*if (items.getTitle() != null) {
                 LOGGER.info("schema title {}", items);
                 throw new RuntimeException("getTitle for array item is not null");
@@ -283,16 +280,15 @@ public class InlineModelResolver {
             if (isModelNeeded(items)) {
                 // If this schema should be split into its own model, do so
                 Schema refSchema = this.makeSchemaInComponents(schemaName, items);
-                array.setItems(refSchema);
+                schema.setItems(refSchema);
             }
         }
         // Check allOf, anyOf, oneOf for inline models
-        if (schema instanceof ComposedSchema) {
-            ComposedSchema m = (ComposedSchema) schema;
-            if (m.getAllOf() != null) {
+        if (schema instanceof ComposedSchema || ModelUtils.isComposedSchema(schema)) {
+            if (schema.getAllOf() != null) {
                 List<Schema> newAllOf = new ArrayList<Schema>();
                 boolean atLeastOneModel = false;
-                for (Schema inner : m.getAllOf()) {
+                for (Schema inner : (List<Schema>) schema.getAllOf()) {
                     String schemaName = resolveModelName(inner.getTitle(), modelPrefix + "_allOf");
                     // Recurse to create $refs for inner models
                     gatherInlineModels(inner, schemaName);
@@ -305,21 +301,21 @@ public class InlineModelResolver {
                     }
                 }
                 if (atLeastOneModel) {
-                    m.setAllOf(newAllOf);
+                    schema.setAllOf(newAllOf);
                 } else {
                     // allOf is just one or more types only so do not generate the inline allOf model
-                    if (m.getAllOf().size() == 1) {
+                    if (schema.getAllOf().size() == 1) {
                         // handle earlier in this function when looping through properites
-                    } else if (m.getAllOf().size() > 1) {
+                    } else if (schema.getAllOf().size() > 1) {
                         LOGGER.warn("allOf schema `{}` containing multiple types (not model) is not supported at the moment.", schema.getName());
                     } else {
                         LOGGER.error("allOf schema `{}` contains no items.", schema.getName());
                     }
                 }
             }
-            if (m.getAnyOf() != null) {
+            if (schema.getAnyOf() != null) {
                 List<Schema> newAnyOf = new ArrayList<Schema>();
-                for (Schema inner : m.getAnyOf()) {
+                for (Schema inner : (List<Schema>) schema.getAnyOf()) {
                     String schemaName = resolveModelName(inner.getTitle(), modelPrefix + "_anyOf");
                     // Recurse to create $refs for inner models
                     gatherInlineModels(inner, schemaName);
@@ -330,11 +326,11 @@ public class InlineModelResolver {
                         newAnyOf.add(inner);
                     }
                 }
-                m.setAnyOf(newAnyOf);
+                schema.setAnyOf(newAnyOf);
             }
-            if (m.getOneOf() != null) {
+            if (schema.getOneOf() != null) {
                 List<Schema> newOneOf = new ArrayList<Schema>();
-                for (Schema inner : m.getOneOf()) {
+                for (Schema inner : (List<Schema>) schema.getOneOf()) {
                     String schemaName = resolveModelName(inner.getTitle(), modelPrefix + "_oneOf");
                     // Recurse to create $refs for inner models
                     gatherInlineModels(inner, schemaName);
@@ -345,7 +341,7 @@ public class InlineModelResolver {
                         newOneOf.add(inner);
                     }
                 }
-                m.setOneOf(newOneOf);
+                schema.setOneOf(newOneOf);
             }
         }
         // Check not schema
@@ -547,11 +543,10 @@ public class InlineModelResolver {
         for (String modelName : modelNames) {
             Schema model = models.get(modelName);
             if (ModelUtils.isComposedSchema(model)) {
-                ComposedSchema m = (ComposedSchema) model;
-                // inline child schemas
-                flattenComposedChildren(modelName + "_allOf", m.getAllOf());
-                flattenComposedChildren(modelName + "_anyOf", m.getAnyOf());
-                flattenComposedChildren(modelName + "_oneOf", m.getOneOf());
+                // inline child schemas - use Schema methods directly for 3.1 compatibility
+                flattenComposedChildren(modelName + "_allOf", model.getAllOf());
+                flattenComposedChildren(modelName + "_anyOf", model.getAnyOf());
+                flattenComposedChildren(modelName + "_oneOf", model.getOneOf());
             } else if (model instanceof Schema) {
                 gatherInlineModels(model, modelName);
             }

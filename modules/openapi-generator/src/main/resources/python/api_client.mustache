@@ -270,6 +270,20 @@ class ApiClient(object):
                 new_params.append((k, v))
         return new_params
 
+    @staticmethod
+    def _is_mo_ref(obj):
+        """Detect if a dict represents a MoRef (Managed Object Reference).
+        A MoRef has Moid and ObjectType keys and is used as a reference to another object.
+        The ClassId for MoRef objects must always be 'mo.MoRef'.
+        """
+        if not isinstance(obj, dict):
+            return False
+        keys = {k.lower() if isinstance(k, str) else k for k in obj.keys()}
+        # Check for both 'objecttype' (from CamelCase 'ObjectType'.lower())
+        # and 'object_type' (from snake_case keys)
+        has_object_type = 'objecttype' in keys or 'object_type' in keys
+        return 'moid' in keys and has_object_type and ('link' in keys or 'selector' in keys)
+
     @classmethod
     def sanitize_for_serialization(cls, obj):
         """Prepares data for transmission before it is sent with the rest client
@@ -285,11 +299,15 @@ class ApiClient(object):
         :return: The serialized form of data.
         """
         if isinstance(obj, (ModelNormal, ModelComposed)):
-            return {
+            result = {
                 key: cls.sanitize_for_serialization(val) for key,
                 val in model_to_dict(
                     obj,
                     serialize=True).items()}
+            # For MoRef model objects, ensure ClassId is always 'mo.MoRef'
+            if cls._is_mo_ref(result):
+                result['ClassId'] = 'mo.MoRef'
+            return result
         elif isinstance(obj, io.IOBase):
             return cls.get_file_data_and_close_file(obj)
         elif isinstance(obj, (str, int, float, none_type, bool)):
@@ -301,7 +319,11 @@ class ApiClient(object):
         elif isinstance(obj, (list, tuple)):
             return [cls.sanitize_for_serialization(item) for item in obj]
         if isinstance(obj, dict):
-            return {key: cls.sanitize_for_serialization(val) for key, val in obj.items()}
+            result = {key: cls.sanitize_for_serialization(val) for key, val in obj.items()}
+            # For MoRef objects, ensure ClassId is always 'mo.MoRef'
+            if cls._is_mo_ref(obj):
+                result['ClassId'] = 'mo.MoRef'
+            return result
         raise ApiValueError(
             'Unable to prepare type {} for serialization'.format(
                 obj.__class__.__name__))

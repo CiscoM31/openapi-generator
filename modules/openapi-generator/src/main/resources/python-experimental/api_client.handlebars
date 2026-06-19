@@ -48,6 +48,19 @@ class RequestField(RequestFieldBase):
 
 
 class JSONEncoder(json.JSONEncoder):
+    @staticmethod
+    def _is_mo_ref(obj):
+        """Detect if a dict/frozendict represents a MoRef (Managed Object Reference).
+        A MoRef has Moid and ObjectType keys and is used as a reference to another object.
+        The ClassId for MoRef objects must always be 'mo.MoRef'.
+        """
+        if not isinstance(obj, (dict, frozendict)):
+            return False
+        keys = set()
+        for k in obj.keys():
+            keys.add(k.lower() if isinstance(k, str) else k)
+        return 'moid' in keys and 'object_type' in keys and ('link' in keys or 'selector' in keys)
+
     def default(self, obj):
         if isinstance(obj, str):
             return str(obj)
@@ -64,7 +77,11 @@ class JSONEncoder(json.JSONEncoder):
         elif isinstance(obj, BoolClass):
             return bool(obj)
         elif isinstance(obj, (dict, frozendict)):
-            return {key: self.default(val) for key, val in obj.items()}
+            result = {key: self.default(val) for key, val in obj.items()}
+            # For MoRef objects, ensure ClassId is always 'mo.MoRef'
+            if self._is_mo_ref(obj):
+                result['ClassId'] = 'mo.MoRef'
+            return result
         elif isinstance(obj, (list, tuple)):
             return [self.default(item) for item in obj]
         raise ApiValueError('Unable to prepare type {} for serialization'.format(obj.__class__.__name__))
