@@ -51,6 +51,7 @@ func New{{classname}}({{#requiredVars}}{{nameInCamelCase}} {{dataType}}{{^-last}
 {{#defaultValue}}
 {{^vendorExtensions.x-golang-is-container}}
 {{^isReadOnly}}
+{{^vendorExtensions.x-createOnly}}
 {{#isNullable}}
 	var {{nameInCamelCase}} {{{datatypeWithEnum}}} = {{{.}}}
 	this.{{name}} = *New{{{dataType}}}(&{{nameInCamelCase}})
@@ -59,6 +60,7 @@ func New{{classname}}({{#requiredVars}}{{nameInCamelCase}} {{dataType}}{{^-last}
 	var {{nameInCamelCase}} {{{dataType}}} = {{{.}}}
 	this.{{name}} = &{{nameInCamelCase}}
 {{/isNullable}}
+{{/vendorExtensions.x-createOnly}}
 {{/isReadOnly}}
 {{/vendorExtensions.x-golang-is-container}}
 {{/defaultValue}}
@@ -76,6 +78,7 @@ func New{{classname}}WithDefaults() *{{classname}} {
 {{#defaultValue}}
 {{^vendorExtensions.x-golang-is-container}}
 {{^isReadOnly}}
+{{^vendorExtensions.x-createOnly}}
 {{#isNullable}}
 {{!we use datatypeWithEnum here, since it will represent the non-nullable name of the datatype, e.g. int64 for NullableInt64}}
 	var {{nameInCamelCase}} {{{datatypeWithEnum}}} = {{{.}}}
@@ -85,6 +88,7 @@ func New{{classname}}WithDefaults() *{{classname}} {
 	var {{nameInCamelCase}} {{{dataType}}} = {{{.}}}
 	this.{{name}} = {{^required}}&{{/required}}{{nameInCamelCase}}
 {{/isNullable}}
+{{/vendorExtensions.x-createOnly}}
 {{/isReadOnly}}
 {{/vendorExtensions.x-golang-is-container}}
 {{/defaultValue}}
