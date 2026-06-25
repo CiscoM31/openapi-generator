@@ -524,6 +524,22 @@ func (c *APIClient) decode(v interface{}, b []byte, contentType string) (err err
 		}
 		return nil
 	}
+	// Fallback: text/plain responses may carry JSON-encoded error messages
+	// (e.g. gateway-timeout: Content-Type: text/plain; charset=utf-8 with JSON body).
+	if strings.HasPrefix(contentType, "text/plain") && json.Valid(b) {
+		if actualObj, ok := v.(interface{ GetActualInstance() interface{} }); ok { // oneOf, anyOf schemas
+			if unmarshalObj, ok := actualObj.(interface{ UnmarshalJSON([]byte) error }); ok {
+				if err = unmarshalObj.UnmarshalJSON(b); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("Unknown type with GetActualInstance but no unmarshalObj.UnmarshalJSON defined")
+			}
+		} else if err = json.Unmarshal(b, v); err != nil {
+			return err
+		}
+		return nil
+	}
 	return errors.New("undefined response type")
 }
 
