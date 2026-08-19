@@ -41,6 +41,13 @@
         # check_allowed_values=false
         # Type validation will still be enforced regardless of this setting
         skip_validation = os.environ.get("check_allowed_values", "True").lower() in ("false")
+        
+        # Skip pattern/regex validation for read-only properties since they are
+        # server-provided values and should not be validated client-side.
+        # This fixes issues where server returns data that doesn't match restrictive
+        # patterns defined in the OpenAPI spec (e.g., cluster names with dots).
+        is_read_only = hasattr(self, 'read_only_vars') and name in self.read_only_vars
+        
         if not skip_validation:
             if (name,) in self.allowed_values:
                 check_allowed_values(
@@ -48,7 +55,8 @@
                     (name,),
                     value
                 )
-            if (name,) in self.validations:
+            # Skip regex/pattern validation for read-only properties
+            if (name,) in self.validations and not is_read_only:
                 check_validations(
                     self.validations,
                     (name,),
